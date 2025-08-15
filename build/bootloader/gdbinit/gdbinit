@@ -1,0 +1,2 @@
+source /home/mariem/EC11_PCNT_encoder_driver/build/bootloader/gdbinit/symbols
+source /home/mariem/EC11_PCNT_encoder_driver/build/bootloader/gdbinit/connect
