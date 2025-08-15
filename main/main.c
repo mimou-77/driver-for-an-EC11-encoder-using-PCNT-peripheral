@@ -1,26 +1,4 @@
 
-/**
- * @brief in the pcnt peripheral:
- * 
- *          - interrupt on channel a :
- *                  - edge interrupt : pin A
- *                  - level to check when edge interrupt happens : pin B
- * 
- *          - interrupt on channel b :
- *                  - edge interrupt : pin B
- *                  - level to check when edge interrupt happens : pin A
- * 
- *          CONFIG:
- *              A: falling edge before B => CW
- *              B: falling edge before A => CCW
- *              example: CW then CCW
- *              1. 
- * 
- * @date 2025-08-15
- */
-#define outline_check_haut 0
-
-
 #include "esp_log.h"
 
 #include "sdkconfig.h"
