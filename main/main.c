@@ -12,8 +12,6 @@
 #include "driver/gpio.h"
 
 
- 
-
 
 static const char * TAG = "main";
  
@@ -27,44 +25,6 @@ static const char * TAG = "main";
 #define EC11_GPIO_B 2
 
 #define MAX_GLITCH_NS 1000 //1µs
-
-
-
-//-----------------------------------------------
-//            private fn            
-//-----------------------------------------------
-
-/**
- * @brief when the event "watchpoint reached" happens, this cb executes
- *        this cb does the following:
- *        - send watchpoint value to the queue + context switch to main() task when queue receives
- *  
- * @param unit when event happens, it checks the unit on which it happened
- * @param edata event data = event details = which watchpoint was reached
- * @param user_ctx passed from main to cb 
- * @return 
- */
-static bool pcnt_on_reach(pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *edata, void *user_ctx)
-{
-    BaseType_t high_task_wakeup; //like a bool that indicates if a high priority task woke up
-    
-    //user_ctx is the value of the variable: QueueHandle_t in main (QueueHandle_t = QueueDefinition *)
-    //queue here (inside cb) points the same memory object as main()>queue
-    //=> if something is sent to cb queue <=> it is sent to main queue
-    QueueHandle_t queue = (QueueHandle_t)user_ctx;
-
-    //send event watch_point_value to queue
-    //now the variable queue defined in main has watch_point_value inside it
-    //giving 3 parameters to xQueueSendFromISR() <=> do a context switch before exiting the interrupt cb
-    //if sending the elt to the queue caused a high priority task to wakeup [here: main() task wakes up after it's
-    //been blocked by xQueueReceive(), so xQueueSendFromISR() asks for a context switch to the woken task =main()
-    xQueueSendFromISR(queue, &(edata->watch_point_value), &high_task_wakeup);
-
-    return (high_task_wakeup == pdTRUE);
-}
-
-
-
 
 
 
@@ -123,39 +83,6 @@ void app_main(void)
     //◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘◘
 
 
-
-
-    ESP_LOGI(TAG, "add watch points and register callbacks");
-
-    //when count reaches these specif values, an event "watchpoint reached" happens
-    int watch_points[] = {PCNT_LOW_LIMIT, -50, 0, 50, PCNT_HIGH_LIMIT};
-
-    //traverse the array from 0 to len-1 and add watch points -1000, -50, 0, 50, 1000
-    //Now that we added the watchpoints: each time a watchpoint value is reached: an event happens and a cb is
-    //executed ; event data is the watchpoint value
-    for (size_t i = 0; i < sizeof(watch_points) / sizeof(watch_points[0]); i++)
-    {
-        pcnt_unit_add_watch_point(pcnt_unit, watch_points[i]);
-    }
-
-    //this is just a set_of_pcnt_cbs variable
-    pcnt_event_callbacks_t cbs =
-    {
-        .on_reach = pcnt_on_reach
-    };
-
-    //the queue can contain up to 10 ints
-    QueueHandle_t queue = xQueueCreate(10, sizeof(int));
-
-    
-    //attach cb to pcnt_unit_interrupt
-    //queue is passed as a parameter to the cb when it executes
-    //queue is user_ctx
-    //when a watchpoint event happens: the cb executes
-    //cb sends event data (= watchpoint value) to the queue with xQueueSendFromISR()
-    //=> unblocks the main task blocked by xQueueReceive() and does a ctx switch to main task
-    pcnt_unit_register_event_callbacks(pcnt_unit, &cbs, queue);
-
     ESP_LOGI(TAG, "enable pcnt unit");
     pcnt_unit_enable(pcnt_unit);
 
@@ -171,23 +98,10 @@ void app_main(void)
 
     while (1)
     {
-        //check if the queue received an element; (timeout = 1000 ms)
-        //if yes: store the received element inside the variable: event_count (elt = watchpoint value)
-        //this is a blocking function, the main task remains blocked for 1000 ms until the queue received something
-        //
-        // when the event happens and the cb is executed: the event data is sent to the queue,
-        // => the blocked main task wakes up. [ blocked by xQueueReceive() ]
-        // the main task wakes up, so inside the cb: xQueueSendFromISR() sets high_task_wakeup to pdTRUE,
-        // and a context switch happens towards the main task. [ ctx switch before interrupt is finished ]
-        if (xQueueReceive(queue, &event_count, pdMS_TO_TICKS(500)))
-        {
-            //the element received by the queue is the watchpoint value
-            ESP_LOGI(TAG, "Watch point event, count: %d", event_count); //log the watchpoint value
-        }
-        else //if the queue received nothing and timeout : log the count (from pcnt unit)
-        {
-            pcnt_unit_get_count(pcnt_unit, &pulse_count);
-            ESP_LOGI(TAG, "Pulse count: %d", pulse_count);
-        }
+    
+        //log count
+        pcnt_unit_get_count(pcnt_unit, &pulse_count);
+        ESP_LOGI(TAG, "Pulse count: %d", pulse_count);
+
     }
 }
