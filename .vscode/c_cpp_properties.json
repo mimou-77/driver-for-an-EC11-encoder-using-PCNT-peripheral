@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "~/esp-idf/components/**",
+                "managed_components/**",
+                "~/ili9341_display_driver/components/**",
+                "~/esp-matter/examples/common/**",
+                "~/esp-matter/connectedhomeip/connectedhomeip/config/esp32/components/**",
+                "~/esp-matter/components/**",
+                "~/esp-matter/device_hal/device"
+
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
